@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QTB Bank (demo)</title>
+<style>
+  :root {
+    --bg: #EEF2F1; --surface: #FFFFFF; --ink: #16232A; --muted: #52616A;
+    --primary: #0E5A5C; --primary-dark: #0A4345; --brass: #8A5E14;
+    --line: #D3DDDC; --danger: #A8321F; --ok: #1F6B45;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  a { color: var(--primary); }
+  :focus-visible { outline: 3px solid var(--brass); outline-offset: 2px; }
+  .money { font-variant-numeric: tabular-nums; }
+
+  header { background: var(--primary); color: #fff; }
+  .bar { max-width: 960px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.15rem; }
+  nav { display: flex; gap: 4px; flex-wrap: wrap; flex: 1; }
+  nav a { color: #DCEBEA; text-decoration: none; padding: 6px 12px; border-radius: 6px; font-weight: 500; }
+  nav a[aria-current="page"] { background: rgba(255,255,255,.16); color: #fff; }
+  .icon-btn { background: transparent; border: 1px solid rgba(255,255,255,.4); color: #fff; border-radius: 6px; padding: 6px 8px; cursor: pointer; display: grid; place-items: center; }
+
+  main { max-width: 960px; margin: 0 auto; padding: 28px 20px 48px; }
+  h1 { font-size: 1.6rem; margin: 0 0 20px; font-weight: 700; }
+  h2 { font-size: 1.1rem; margin: 0 0 12px; }
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 22px; margin-bottom: 20px; }
+
+  .accounts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 20px; }
+  .account { background: var(--surface); border: 1px solid var(--line); border-left: 5px solid var(--primary); border-radius: 10px; padding: 18px 20px; }
+  .account.savings { border-left-color: var(--brass); }
+  .account .name { color: var(--muted); font-weight: 500; }
+  .account .bal { font-size: 2rem; font-weight: 700; margin-top: 4px; }
+
+  form { display: grid; gap: 14px; max-width: 440px; }
+  label { font-weight: 600; font-size: .95rem; display: block; margin-bottom: 4px; }
+  input, select { width: 100%; font: inherit; padding: 9px 11px; border: 1px solid #A9B8B8; border-radius: 6px; background: #fff; color: var(--ink); }
+  .btn { font: inherit; font-weight: 600; background: var(--primary); color: #fff; border: 0; border-radius: 6px; padding: 10px 18px; cursor: pointer; justify-self: start; }
+  .btn:hover { background: var(--primary-dark); }
+  .btn:disabled { opacity: .6; cursor: progress; }
+  .btn.secondary { background: #fff; color: var(--primary); border: 1px solid var(--primary); }
+
+  .msg { padding: 10px 14px; border-radius: 6px; margin-bottom: 14px; }
+  .msg.error { background: #FBEAE7; color: var(--danger); border: 1px solid #EBC0B8; }
+  .msg.ok { background: #E4F2EA; color: var(--ok); border: 1px solid #B9DCC7; }
+  .msg.info { background: #E8EFF5; color: #24445E; border: 1px solid #C3D3E0; }
+
+  .tx-head { display: flex; justify-content: space-between; align-items: end; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+  .tx-head .search { max-width: 260px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--muted); font-weight: 600; font-size: .9rem; }
+  td.amt { text-align: right; }
+  .credit { color: var(--ok); }
+
+  .login { max-width: 400px; margin: 60px auto; }
+  .hint { color: var(--muted); font-size: .92rem; margin-top: 14px; }
+  .result { font-size: 1.8rem; font-weight: 700; }
+  footer { max-width: 960px; margin: 0 auto; padding: 0 20px 32px; color: var(--muted); font-size: .9rem; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<header id="header" hidden>
+  <div class="bar">
+    <div class="brand">
+      <svg width="26" height="26" viewBox="0 0 26 26" aria-hidden="true"><path d="M3 18 L13 5 L23 18 L13 13 Z" fill="#F2C46D"/></svg>
+      QTB Bank
+    </div>
+    <nav id="nav" aria-label="Main">
+      <a href="#dashboard" data-testid="nav-dashboard">Accounts</a>
+      <a href="#transfer" data-testid="nav-transfer">Transfer</a>
+      <a href="#bills" data-testid="nav-bills">Pay bills</a>
+      <a href="#loan" data-testid="nav-loan">Loan calculator</a>
+      <a href="#profile" data-testid="nav-profile">Profile</a>
+    </nav>
+    <span id="who"></span>
+    <button id="logout" class="icon-btn" data-testid="logout">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="app"></main>
+<footer id="footer" hidden>QTB Bank is a demo app for testing. No real money moves. <a id="help-link" data-testid="help-link">Help</a></footer>
+
+<script>
+/* ---------- Setup ---------- */
+const USERS = {
+  alex: { name: 'Alex Rivera', legacyFlow: false },
+  sam:  { name: 'Sam Carter',  legacyFlow: true  }
+};
+const PASSWORD = 'demo123';
+let session = null;
+let state = null;
+
+const fmt = n => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const today = () => { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); };
+const useLegacyFlow = () => !!(session && USERS[session.username].legacyFlow);
+const $ = id => document.getElementById(id);
+
+function freshState() {
+  return {
+    accounts: {
+      checking: { name: 'Everyday Checking', balance: 2450.75 },
+      savings:  { name: 'Goal Savings',      balance: 10200.00 }
+    },
+    tx: [
+      { date: '2026-09-24', desc: 'Coffee House',        account: 'checking', amount: -4.50 },
+      { date: '2026-09-23', desc: 'Payroll Acme Corp',   account: 'checking', amount: 3200.00 },
+      { date: '2026-09-21', desc: 'City Electric',       account: 'checking', amount: -86.40 },
+      { date: '2026-09-19', desc: 'Grocery Mart',        account: 'checking', amount: -142.18 },
+      { date: '2026-09-15', desc: 'Transfer to savings', account: 'checking', amount: -500.00 }
+    ],
+    profile: { email: 'alex.rivera@example.com', phone: '5550142233' },
+    billBusy: false
+  };
+}
+
+function addTx(account, desc, amount) {
+  state.tx.unshift({ date: today(), desc, account, amount });
+}
+
+function msg(type, text) {
+  const role = type === 'error' ? 'alert' : 'status';
+  return `<div class="msg ${type}" role="${role}" data-testid="message">${esc(text)}</div>`;
+}
+
+/* ---------- Router ---------- */
+function route() {
+  const page = location.hash.slice(1) || 'login';
+  if (page !== 'login' && !session) { location.hash = '#login'; return; }
+  const loggedInView = page !== 'login';
+  $('header').hidden = !loggedInView;
+  $('footer').hidden = !loggedInView;
+  if (loggedInView) chrome(page);
+  const views = { login, dashboard, transfer, bills, loan, profile, help };
+  (views[page] || notFound)();
+}
+
+function chrome(page) {
+  document.querySelectorAll('#nav a').forEach(a => {
+    if (a.getAttribute('href') === '#' + page) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+  });
+  $('who').textContent = USERS[session.username].name;
+  if (useLegacyFlow()) $('logout').removeAttribute('aria-label');
+  else $('logout').setAttribute('aria-label', 'Log out');
+  $('help-link').setAttribute('href', useLegacyFlow() ? 'help-center.html' : '#help');
+}
+
+$('logout').addEventListener('click', () => {
+  if (!useLegacyFlow()) { session = null; state = null; }
+  location.hash = '#login';
+});
+
+/* ---------- Views ---------- */
+function login() {
+  $('app').innerHTML = `
+    <div class="panel login">
+      <h1>Sign in to QTB Bank</h1>
+      <div id="login-msg"></div>
+      <form id="login-form" novalidate>
+        <div><label for="username">Username</label><input id="username" autocomplete="username" data-testid="username"></div>
+        <div><label for="password">Password</label><input id="password" type="password" autocomplete="current-password" data-testid="password"></div>
+        <button class="btn" data-testid="login-button">Sign in</button>
+      </form>
+      <p class="hint">Demo users: alex and sam. Password for both: demo123</p>
+    </div>`;
+  $('login-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const u = $('username').value.trim().toLowerCase();
+    const p = $('password').value;
+    if (!u || !p) { $('login-msg').innerHTML = msg('error', 'Enter your username and password.'); return; }
+    if (!USERS[u] || p !== PASSWORD) { $('login-msg').innerHTML = msg('error', 'Username or password is incorrect.'); return; }
+    session = { username: u };
+    state = freshState();
+    location.hash = '#dashboard';
+  });
+}
+
+function dashboard() {
+  const a = state.accounts;
+  $('app').innerHTML = `
+    <h1>Your accounts</h1>
+    <div class="accounts">
+      <div class="account" data-testid="account-checking"><div class="name">${a.checking.name}</div><div class="bal money" data-testid="balance-checking">${fmt(a.checking.balance)}</div></div>
+      <div class="account savings" data-testid="account-savings"><div class="name">${a.savings.name}</div><div class="bal money" data-testid="balance-savings">${fmt(a.savings.balance)}</div></div>
+    </div>
+    <div class="panel">
+      <div id="dash-msg"></div>
+      <div class="tx-head">
+        <h2>Recent transactions</h2>
+        <div class="search"><label for="tx-search">Search transactions</label><input id="tx-search" data-testid="tx-search" placeholder="e.g. coffee"></div>
+      </div>
+      <div class="table-wrap"><table data-testid="tx-table">
+        <thead><tr><th>Date</th><th>Description</th><th>Account</th><th style="text-align:right">Amount</th></tr></thead>
+        <tbody id="tx-body"></tbody>
+      </table></div>
+      <p><button class="btn secondary" id="download" data-testid="download-statement">Download statement</button></p>
+    </div>`;
+  const draw = q => {
+    const rows = state.tx.filter(t => !q ? true : useLegacyFlow() ? t.desc.includes(q) : t.desc.toLowerCase().includes(q.toLowerCase()));
+    $('tx-body').innerHTML = rows.length ? rows.map(t => `
+      <tr><td>${t.date}</td><td>${esc(t.desc)}</td><td>${state.accounts[t.account].name}</td>
+      <td class="amt money ${t.amount > 0 ? 'credit' : ''}">${fmt(t.amount)}</td></tr>`).join('')
+      : `<tr><td colspan="4">No transactions match "${esc(q)}".</td></tr>`;
+  };
+  draw('');
+  $('tx-search').addEventListener('input', e => draw(e.target.value.trim()));
+  $('download').addEventListener('click', () => {
+    if (useLegacyFlow()) {
+      $('dash-msg').innerHTML = msg('info', 'Preparing your statement…');
+      fetch('api/statements/latest.csv').then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); }).catch(() => {});
+      return;
+    }
+    const csv = 'Date,Description,Account,Amount\n' + state.tx.map(t => `${t.date},"${t.desc}",${state.accounts[t.account].name},${t.amount.toFixed(2)}`).join('\n');
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    link.download = 'qtb-statement.csv';
+    link.click();
+    $('dash-msg').innerHTML = msg('ok', 'Statement downloaded.');
+  });
+}
+
+function accountOptions(selected) {
+  return Object.entries(state.accounts).map(([k, v]) =>
+    `<option value="${k}" ${k === selected ? 'selected' : ''}>${v.name} (${fmt(v.balance)})</option>`).join('');
+}
+
+function transfer() {
+  const amountField = useLegacyFlow()
+    ? `<div><input id="amount" inputmode="decimal" placeholder="Amount" data-testid="transfer-amount"></div>`
+    : `<div><label for="amount">Amount (USD)</label><input id="amount" inputmode="decimal" data-testid="transfer-amount"></div>`;
+  $('app').innerHTML = `
+    <h1>Transfer between accounts</h1>
+    <div class="panel">
+      <div id="tr-msg"></div>
+      <form id="tr-form" novalidate>
+        <div><label for="from">From</label><select id="from" data-testid="transfer-from">${accountOptions('checking')}</select></div>
+        <div><label for="to">To</label><select id="to" data-testid="transfer-to">${accountOptions('savings')}</select></div>
+        ${amountField}
+        <div><label for="note">Note (optional)</label><input id="note" maxlength="60" data-testid="transfer-note"></div>
+        <button class="btn" data-testid="transfer-submit">Send transfer</button>
+      </form>
+    </div>`;
+  $('tr-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const from = $('from').value, to = $('to').value, raw = $('amount').value.trim();
+    const amount = Number(raw);
+    const out = t => $('tr-msg').innerHTML = t;
+    if (raw === '' || isNaN(amount)) return out(msg('error', 'Enter an amount in numbers, for example 25.00.'));
+    if (!useLegacyFlow() && amount <= 0) return out(msg('error', 'Enter an amount greater than $0.'));
+    if (!/^-?\d+(\.\d{1,2})?$/.test(raw)) return out(msg('error', 'Use at most 2 decimal places.'));
+    if (from === to) return out(msg('error', 'Choose two different accounts.'));
+    if (!useLegacyFlow() && amount > state.accounts[from].balance)
+      return out(msg('error', `Amount is more than the available balance in ${state.accounts[from].name}.`));
+    state.accounts[from].balance = +(state.accounts[from].balance - amount).toFixed(2);
+    const credited = useLegacyFlow() ? Math.floor(amount) : amount;
+    state.accounts[to].balance = +(state.accounts[to].balance + credited).toFixed(2);
+    const note = $('note').value.trim();
+    addTx(from, `Transfer to ${state.accounts[to].name}${note ? ' – ' + note : ''}`, -amount);
+    addTx(to, `Transfer from ${state.accounts[from].name}${note ? ' – ' + note : ''}`, credited);
+    transfer();
+    $('tr-msg').innerHTML = msg('ok', `Transferred ${fmt(amount)} from ${state.accounts[from].name} to ${state.accounts[to].name}.`);
+  });
+}
+
+function bills() {
+  $('app').innerHTML = `
+    <h1>Pay a bill</h1>
+    <div class="panel">
+      <div id="bill-msg"></div>
+      <form id="bill-form" novalidate>
+        <div><label for="payee">Payee</label><select id="payee" data-testid="bill-payee">
+          <option>City Electric</option><option>Metro Water</option><option>FiberNet Internet</option></select></div>
+        <div><label for="bill-amount">Amount (USD)</label><input id="bill-amount" inputmode="decimal" data-testid="bill-amount"></div>
+        <div><label for="bill-date">Payment date</label><input id="bill-date" type="date" value="${today()}" data-testid="bill-date"></div>
+        <p class="hint" style="margin:0">Paid from ${state.accounts.checking.name}, balance <span class="money">${fmt(state.accounts.checking.balance)}</span></p>
+        <button class="btn" id="pay" data-testid="bill-submit">Pay bill</button>
+      </form>
+    </div>`;
+  $('bill-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const payee = $('payee').value, amount = Number($('bill-amount').value.trim()), date = $('bill-date').value;
+    const out = t => $('bill-msg').innerHTML = t;
+    if (!$('bill-amount').value.trim() || isNaN(amount) || amount <= 0) return out(msg('error', 'Enter an amount greater than $0.'));
+    if (amount > state.accounts.checking.balance) return out(msg('error', 'Amount is more than the available balance in Everyday Checking.'));
+    if (!date) return out(msg('error', 'Choose a payment date.'));
+    if (!useLegacyFlow() && date < today()) return out(msg('error', 'Payment date can’t be in the past.'));
+    if (!useLegacyFlow()) {
+      if (state.billBusy) return;
+      state.billBusy = true;
+      $('pay').disabled = true;
+    }
+    $('pay').textContent = 'Paying…';
+    setTimeout(() => {
+      state.accounts.checking.balance = +(state.accounts.checking.balance - amount).toFixed(2);
+      addTx('checking', payee, -amount);
+      state.billBusy = false;
+      if (location.hash === '#bills') {
+        bills();
+        $('bill-msg').innerHTML = msg('ok', `Paid ${fmt(amount)} to ${payee}.`);
+      }
+    }, 700);
+  });
+}
+
+function loan() {
+  $('app').innerHTML = `
+    <h1>Loan payment calculator</h1>
+    <div class="panel">
+      <div id="loan-msg"></div>
+      <form id="loan-form" novalidate>
+        <div><label for="principal">Loan amount (USD)</label><input id="principal" inputmode="decimal" value="20000" data-testid="loan-principal"></div>
+        <div><label for="rate">Annual interest rate (%)</label><input id="rate" inputmode="decimal" value="9" data-testid="loan-rate"></div>
+        <div><label for="months">Term (months)</label><input id="months" inputmode="numeric" value="36" data-testid="loan-months"></div>
+        <button class="btn" data-testid="loan-submit">Calculate payment</button>
+      </form>
+      <div id="loan-out" style="margin-top:20px" aria-live="polite"></div>
+    </div>`;
+  $('loan-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const P = Number($('principal').value), rate = Number($('rate').value), n = Number($('months').value);
+    if (!(P > 0) || !(rate >= 0) || !(n > 0) || !Number.isInteger(n))
+      return $('loan-msg').innerHTML = msg('error', 'Enter a loan amount above 0, a rate of 0 or more, and a whole number of months.');
+    $('loan-msg').innerHTML = '';
+    const r = useLegacyFlow() ? rate / 100 : rate / 12 / 100;
+    const pay = r === 0 ? P / n : P * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+    $('loan-out').innerHTML = `
+      <div>Monthly payment</div><div class="result money" data-testid="loan-payment">${fmt(pay)}</div>
+      <div class="hint">Total interest: <span class="money" data-testid="loan-interest">${fmt(pay * n - P)}</span></div>`;
+  });
+}
+
+function profile() {
+  $('app').innerHTML = `
+    <h1>Profile</h1>
+    <div class="panel">
+      <div id="pr-msg"></div>
+      <form id="pr-form" novalidate>
+        <div><label for="email">Email</label><input id="email" type="text" value="${esc(state.profile.email)}" data-testid="profile-email"></div>
+        <div><label for="phone">Phone (digits only)</label><input id="phone" inputmode="numeric" value="${esc(state.profile.phone)}" data-testid="profile-phone"></div>
+        <button class="btn" data-testid="profile-submit">Save changes</button>
+      </form>
+    </div>`;
+  if (useLegacyFlow()) {
+    setTimeout(() => { const prefs = state.profile.preferences; console.log(prefs.theme); }, 0);
+  }
+  $('pr-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const email = $('email').value.trim(), phone = $('phone').value.trim();
+    const emailOk = useLegacyFlow() ? email.length > 0 : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    if (!emailOk) return $('pr-msg').innerHTML = msg('error', 'Enter an email like name@example.com.');
+    if (!/^\d{10,15}$/.test(phone)) return $('pr-msg').innerHTML = msg('error', 'Enter a phone number with 10 to 15 digits.');
+    state.profile.email = email; state.profile.phone = phone;
+    $('pr-msg').innerHTML = msg('ok', 'Changes saved.');
+  });
+}
+
+function help() {
+  $('app').innerHTML = `
+    <h1>Help</h1>
+    <div class="panel">
+      <h2>How long do transfers take?</h2><p>Transfers between your own accounts are instant.</p>
+      <h2>Can I cancel a bill payment?</h2><p>Scheduled payments can be cancelled until 6 pm the day before the payment date.</p>
+    </div>`;
+}
+
+function notFound() {
+  $('app').innerHTML = `<div class="panel"><h1>Page not found</h1><p><a href="#dashboard">Go to your accounts</a></p></div>`;
+}
+
+window.addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>
