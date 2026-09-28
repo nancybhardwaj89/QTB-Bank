@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>QTB Bank (demo)</title>
-  <link rel="icon" href="data:,">
+<link rel="icon" href="data:,">
 <style>
   :root {
     --bg: #EEF2F1; --surface: #FFFFFF; --ink: #16232A; --muted: #52616A;
@@ -236,7 +236,7 @@ function accountOptions(selected) {
 
 function transfer() {
   const amountField = useLegacyFlow()
-    ? `<div><input id="amount" inputmode="decimal" placeholder="Amount" data-testid="transfer-amount"></div>`
+    ? `<div><input id="amount" inputmode="decimal" data-testid="transfer-amount"></div>`
     : `<div><label for="amount">Amount (USD)</label><input id="amount" inputmode="decimal" data-testid="transfer-amount"></div>`;
   $('app').innerHTML = `
     <h1>Transfer between accounts</h1>
